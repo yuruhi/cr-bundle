@@ -51,7 +51,7 @@ module CrBundle
 
       parser.on("-e SOURCE", "--eval SOURCE", "eval code from args") do |eval_source|
         source = eval_source
-        file_name = Dir.current
+        file_name = Path[Dir.current]
       end
       parser.on("-i", "--inplace", "inplace edit") do
         options.inplace = true
@@ -80,7 +80,7 @@ module CrBundle
               error("Is a directory: `#{file}`")
             end
             source = File.read(unknown_args[0])
-            file_name = file
+            file_name = Path[file].expand
             unknown_args[1..].each { |file|
               info("File #{file} is ignored.")
             }
@@ -95,7 +95,7 @@ module CrBundle
 
       parser.parse(args)
 
-      bundled = Bundler.new(options).bundle(source.not_nil!, Path[file_name.not_nil!])
+      bundled = Bundler.new(options).bundle(source.not_nil!, file_name.not_nil!)
       if options.inplace
         File.write(file_name.not_nil!, bundled.to_slice)
       else

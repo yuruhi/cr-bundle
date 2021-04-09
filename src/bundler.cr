@@ -1,6 +1,7 @@
 module CrBundle
   class Bundler
     def initialize(@options : Options)
+      @require_history = Deque(Path).new
     end
 
     # see: https://crystal-lang.org/reference/syntax_and_semantics/requiring_files.html
@@ -22,13 +23,21 @@ module CrBundle
     end
 
     def bundle(source : String, file_name : Path) : String
-      source.gsub(/require(\s*)"(.*?)"/) {
-        if file = get_absolute_path(Path[$2 + ".cr"], file_name)
-          %[# require "#{$2}"\n#{bundle(File.read(file), file)}]
+      @require_history << file_name
+      source.gsub(/require(\s*)"(.*?)"/) do
+        file = get_absolute_path(Path[$2 + ".cr"], file_name)
+        required = file && @require_history.includes?(file)
+        if file && !required
+          <<-EXPANDED_SOURCE
+          # require "#{$2}"
+          #{bundle(File.read(file), file)}
+          EXPANDED_SOURCE
+        elsif required
+          ""
         else
           $~[0]
         end
-      }
+      end
     end
   end
 end
