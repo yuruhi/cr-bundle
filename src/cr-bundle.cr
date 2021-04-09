@@ -13,7 +13,7 @@ module CrBundle
 
   class Options
     property inplace : Bool = false
-    property args : Array(String) = [] of String
+    property paths : Array(Path) = [] of Path
   end
 
   class CLI
@@ -51,9 +51,13 @@ module CrBundle
 
       parser.on("-e SOURCE", "--eval SOURCE", "eval code from args") do |eval_source|
         source = eval_source
+        file_name = Dir.current
       end
       parser.on("-i", "--inplace", "inplace edit") do
         options.inplace = true
+      end
+      parser.on("-p PATH", "--path PATH", "indicate require path") do |path|
+        options.paths = path.split(':').map { |s| Path[s] }
       end
 
       parser.missing_option do |option|
@@ -91,7 +95,7 @@ module CrBundle
 
       parser.parse(args)
 
-      bundled = Bundler.new(source.not_nil!, options).bundle
+      bundled = Bundler.new(options).bundle(source.not_nil!, Path[file_name.not_nil!])
       if options.inplace
         File.write(file_name.not_nil!, bundled.to_slice)
       else
