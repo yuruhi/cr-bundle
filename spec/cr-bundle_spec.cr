@@ -72,6 +72,38 @@ describe CrBundle do
       FileUtils.rm_r(%w[file dir])
     end
 
+    it %[require "./dir/*"] do
+      Dir.mkdir_p("dir/dir2")
+      File.write("dir/1.cr", %[puts "dir/1.cr"])
+      File.write("dir/2.cr", %[puts "dir/2.cr"])
+      File.write("dir/dir2/3.cr", %[puts "dir/dir2/3.cr"])
+      File.write("a.cr", %[require "./dir/*"\nputs "a.cr"])
+      run_bundle("a.cr").should eq <<-RESULT
+      # require "./dir/*"
+      puts "dir/1.cr"
+      puts "dir/2.cr"
+      puts "a.cr"
+      RESULT
+      FileUtils.rm_r("dir")
+      FileUtils.rm("a.cr")
+    end
+    it %[require "./dir/**"] do
+      Dir.mkdir_p("dir/dir2")
+      File.write("dir/1.cr", %[puts "dir/1.cr"])
+      File.write("dir/2.cr", %[puts "dir/2.cr"])
+      File.write("dir/dir2/3.cr", %[puts "dir/dir2/3.cr"])
+      File.write("a.cr", %[require "./dir/**"\nputs "a.cr"])
+      run_bundle("a.cr").should eq <<-RESULT
+      # require "./dir/**"
+      puts "dir/1.cr"
+      puts "dir/2.cr"
+      puts "dir/dir2/3.cr"
+      puts "a.cr"
+      RESULT
+      FileUtils.rm_r("dir")
+      FileUtils.rm("a.cr")
+    end
+
     it %[require "file.cr" and expand "file.cr"] do
       Dir.mkdir("dir")
       File.write("dir/file.cr", %[puts "file.cr"])
@@ -144,6 +176,7 @@ describe CrBundle do
       puts "a.cr"
       puts "b1.cr"
       # require "./b2"
+      # require "./a"
       
       puts "b2.cr"
       puts "c.cr"
@@ -155,6 +188,7 @@ describe CrBundle do
       File.write("b.cr", %[require "./a"\nputs "b"])
       run_bundle("a.cr").should eq <<-RESULT
       # require "./b"
+      # require "./a"
 
       puts "b"
       puts "a"
