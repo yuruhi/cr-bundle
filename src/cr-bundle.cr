@@ -10,6 +10,7 @@ module CrBundle
       usage: jigsaw [programfile]
 
       HELP_MESSAGE
+  CR_BUNDLE_ENV = "CR_BUNDLE_PATH"
 
   class Options
     property inplace : Bool = false
@@ -36,6 +37,9 @@ module CrBundle
       options = Options.new
       source = nil
       file_name = nil
+      if paths = ENV[CR_BUNDLE_ENV]?
+        options.paths = paths.split(':').map { |s| Path[s] }
+      end
 
       parser = OptionParser.new
       parser.banner = BANNER
@@ -57,7 +61,11 @@ module CrBundle
         options.inplace = true
       end
       parser.on("-p PATH", "--path PATH", "indicate require path") do |path|
-        options.paths = path.split(':').map { |s| Path[s] }
+        if options.paths.empty?
+          options.paths = path.split(':').map { |s| Path[s] }
+        else
+          info("Ignored -p option since set environment CR_BUNDLE_PATH.")
+        end
       end
 
       parser.missing_option do |option|
