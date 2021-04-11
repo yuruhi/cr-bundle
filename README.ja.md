@@ -1,9 +1,11 @@
 # cr-bundle
 
-cr-bundle is a CLI tool for bundling [Crystal language](https://crystal-lang.org/)'s source codes into a single file.
+cr-bundle は与えられた [Crystal](https://ja.crystal-lang.org/) 言語のファイルの中の `require "foo"` を展開して一つのファイルに束ねる CLI ツールです。
 
-## Installation
+## インストール
 
+
+Crystal 言語のインストールが必要です。インストール方法は [インストール - プログラミング言語 Crystal](https://ja.crystal-lang.org/install/) をご覧ください。
 ```sh
 $ cd <your favorite directory>
 $ git clone https://github.com/yuruhi/cr-bundle.git && cd cd-bundle
@@ -11,7 +13,7 @@ $ crystal build --release src/cli.cr -o cr-bundle
 $ cp cr-bundle <your favorite bin>
 ```
 
-## Usage
+## 使い方
 
 ```
 cr-bundle is a crystal language's bundler.
@@ -40,13 +42,13 @@ puts "b.cr"
 puts "a.cr"
 ```
 
-The directory to search can be specified with the environment `CR_BUNDLE_PATH`. If it is not specified, the argument of the `-p` option is used.
+探索の対象となるディレクトリは環境変数 `CR_BUNDLE_PATH` で指定できます。指定されていない場合は `-p` オプションの引数が使用されます。
 
-For detail `require` sepcification, see [Requiring files - Crystal](https://crystal-lang.org/reference/syntax_and_semantics/requiring_files.html).
+詳しい `require` の仕様については [ファイルの require - Crystal](https://ja.crystal-lang.org/reference/syntax_and_semantics/requiring_files.html) をご覧ください。
 
-## Development
+## 開発
 
-- Crystal 0.36.1
+-   Crystal 0.36.1
 
 ## Contributing
 
@@ -58,4 +60,4 @@ For detail `require` sepcification, see [Requiring files - Crystal](https://crys
 
 ## Contributors
 
-- [yuruhi](https://github.com/yuruhi) - creator and maintainer
+-   [yuruhi](https://github.com/yuruhi) - creator and maintainer
