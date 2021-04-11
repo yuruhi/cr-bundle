@@ -44,10 +44,6 @@ The directory to search can be specified with the environment `CR_BUNDLE_PATH`. 
 
 For detail `require` sepcification, see [Requiring files - Crystal](https://crystal-lang.org/reference/syntax_and_semantics/requiring_files.html).
 
-## Development
-
-- Crystal 0.36.1
-
 ## Contributing
 
 1. Fork it (<https://github.com/your-github-user/cr-bundle/fork>)

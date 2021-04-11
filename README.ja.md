@@ -4,8 +4,8 @@ cr-bundle は与えられた [Crystal](https://ja.crystal-lang.org/) 言語の�
 
 ## インストール
 
-
 Crystal 言語のインストールが必要です。インストール方法は [インストール - プログラミング言語 Crystal](https://ja.crystal-lang.org/install/) をご覧ください。
+
 ```sh
 $ cd <your favorite directory>
 $ git clone https://github.com/yuruhi/cr-bundle.git && cd cd-bundle
@@ -45,10 +45,6 @@ puts "a.cr"
 探索の対象となるディレクトリは環境変数 `CR_BUNDLE_PATH` で指定できます。指定されていない場合は `-p` オプションの引数が使用されます。
 
 詳しい `require` の仕様については [ファイルの require - Crystal](https://ja.crystal-lang.org/reference/syntax_and_semantics/requiring_files.html) をご覧ください。
-
-## 開発
-
--   Crystal 0.36.1
 
 ## Contributing
 
