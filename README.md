@@ -1,5 +1,9 @@
 # cr-bundle
 
+[![Crystal CI](https://github.com/yuruhi/cr-bundle/workflows/Crystal%20CI/badge.svg)](https://github.com/yuruhi/cr-bundle/actions?query=workflow%3A%22Crystal+CI%22)
+
+---
+
 cr-bundle is a CLI tool for bundling [Crystal language](https://crystal-lang.org/)'s source codes into a single file.
 
 ## Installation

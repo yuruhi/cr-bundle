@@ -1,5 +1,9 @@
 # cr-bundle
 
+[![Crystal CI](https://github.com/yuruhi/cr-bundle/workflows/Crystal%20CI/badge.svg)](https://github.com/yuruhi/cr-bundle/actions?query=workflow%3A%22Crystal+CI%22)
+
+---
+
 cr-bundle は与えられた [Crystal](https://ja.crystal-lang.org/) 言語のファイルの中の `require "foo"` を展開して一つのファイルに束ねる CLI ツールです。
 
 ## インストール
