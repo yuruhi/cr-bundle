@@ -4,13 +4,13 @@ cr-bundle は与えられた [Crystal](https://ja.crystal-lang.org/) 言語の�
 
 ## インストール
 
-Crystal 言語のインストールが必要です。インストール方法は [インストール - プログラミング言語 Crystal](https://ja.crystal-lang.org/install/) をご覧ください。
+Crystal 言語の[インストール](https://ja.crystal-lang.org/install/)が必要です。
 
 ```sh
 $ cd <your favorite directory>
 $ git clone https://github.com/yuruhi/cr-bundle.git && cd cd-bundle
-$ crystal build --release src/cli.cr -o cr-bundle
-$ cp cr-bundle <your favorite bin>
+$ shards build --release
+$ cp bin/cr-bundle <your favorite bin>
 ```
 
 ## 使い方

@@ -4,11 +4,13 @@ cr-bundle is a CLI tool for bundling [Crystal language](https://crystal-lang.org
 
 ## Installation
 
+First you'll need to install [Crystal](https://crystal-lang.org/install/).
+
 ```sh
 $ cd <your favorite directory>
 $ git clone https://github.com/yuruhi/cr-bundle.git && cd cd-bundle
-$ crystal build --release src/cli.cr -o cr-bundle
-$ cp cr-bundle <your favorite bin>
+$ shards build --release
+$ cp bin/cr-bundle <your favorite bin>
 ```
 
 ## Usage
@@ -54,4 +56,4 @@ For detail `require` sepcification, see [Requiring files - Crystal](https://crys
 
 ## Contributors
 
-- [yuruhi](https://github.com/yuruhi) - creator and maintainer
+-   [yuruhi](https://github.com/yuruhi) - creator and maintainer
