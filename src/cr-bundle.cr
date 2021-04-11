@@ -7,10 +7,9 @@ module CrBundle
   BANNER  = <<-HELP_MESSAGE
       cr-bundle is a crystal language's bundler.
 
-      usage: jigsaw [programfile]
+      usage: cr-bundle [programfile]
 
       HELP_MESSAGE
-  CR_BUNDLE_ENV = "CR_BUNDLE_PATH"
 
   class Options
     property inplace : Bool = false
@@ -37,18 +36,18 @@ module CrBundle
       options = Options.new
       source = nil
       file_name = nil
-      if paths = ENV[CR_BUNDLE_ENV]?
+      if paths = ENV["CR_BUNDLE_PATH"]?
         options.paths = paths.split(':').map { |s| Path[s] }
       end
 
       parser = OptionParser.new
       parser.banner = BANNER
 
-      parser.on("-v", "--version", "show the cppminify version number") do
-        puts "cppminify #{VERSION}"
+      parser.on("-v", "--version", "show the cr-bundle version number") do
+        puts "cr-bundle #{VERSION}"
         exit
       end
-      parser.on("-h", "--help", "show this help message and exit") do
+      parser.on("-h", "--help", "show this help message") do
         puts parser
         exit
       end
@@ -60,7 +59,7 @@ module CrBundle
       parser.on("-i", "--inplace", "inplace edit") do
         options.inplace = true
       end
-      parser.on("-p PATH", "--path PATH", "indicate require path") do |path|
+      parser.on("-p PATH", "--path PATH", "indicate require path\n(you can be specified with the environment `CR_BUNDLE_PATH`)") do |path|
         if options.paths.empty?
           options.paths = path.split(':').map { |s| Path[s] }
         else
