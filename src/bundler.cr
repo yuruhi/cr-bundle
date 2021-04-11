@@ -11,11 +11,11 @@ module CrBundle
         if path.to_s.ends_with?("**")
           return Dir.glob(Path[path.to_s + "/*"].expand(required_from.parent)).select { |s|
             File.file?(s)
-          }.map { |s| Path[s] }
+          }.map { |s| Path[s] }.sort
         elsif path.to_s.ends_with?("*")
           return Dir.glob(path.expand(required_from.parent)).select { |s|
             File.file?(s)
-          }.map { |s| Path[s] }
+          }.map { |s| Path[s] }.sort
         else
           file = path.expand(required_from.parent)
           return [file] if File.file?(file)
