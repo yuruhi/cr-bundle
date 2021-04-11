@@ -10,10 +10,6 @@ targets:
   cr-bundle:
     main: src/cli.cr
 
-dependencies:
-  cr-bundle:
-    github: yuruhi/cr-bundle
-
 crystal: 0.36.1
 
 license: MIT
