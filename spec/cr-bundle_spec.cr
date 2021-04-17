@@ -164,6 +164,37 @@ describe CrBundle do
       FileUtils.rm("a.cr")
       FileUtils.rm_r("dir")
     end
+    it %[require "dir/*"] do
+      Dir.mkdir_p("dir/dir2")
+      File.write("dir/1.cr", %[puts "dir/1.cr"])
+      File.write("dir/2.cr", %[puts "dir/2.cr"])
+      File.write("dir/dir2/3.cr", %[puts "dir/dir2/3.cr"])
+      File.write("a.cr", %[require "dir/*"\nputs "a.cr"])
+      run_bundle("a.cr", %w[.]).should eq <<-RESULT
+      # require "dir/*"
+      puts "dir/1.cr"
+      puts "dir/2.cr"
+      puts "a.cr"
+      RESULT
+      FileUtils.rm("a.cr")
+      FileUtils.rm_r("dir")
+    end
+    it %[require "dir/**"] do
+      Dir.mkdir_p("dir/dir2")
+      File.write("dir/1.cr", %[puts "dir/1.cr"])
+      File.write("dir/2.cr", %[puts "dir/2.cr"])
+      File.write("dir/dir2/3.cr", %[puts "dir/dir2/3.cr"])
+      File.write("a.cr", %[require "dir/**"\nputs "a.cr"])
+      run_bundle("a.cr", %w[.]).should eq <<-RESULT
+      # require "dir/**"
+      puts "dir/1.cr"
+      puts "dir/2.cr"
+      puts "dir/dir2/3.cr"
+      puts "a.cr"
+      RESULT
+      FileUtils.rm_r("dir")
+      FileUtils.rm("a.cr")
+    end
 
     it "require same file" do
       File.write("a.cr", %[puts "a.cr"])

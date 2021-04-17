@@ -25,17 +25,31 @@ module CrBundle
           return [file] if File.file?(file)
         end
       else
-        @options.paths.each do |library_path|
-          file = path.expand(library_path)
-          return [file] if File.file?(file)
-          file = Path[path.to_s + ".cr"].expand(library_path)
-          return [file] if File.file?(file)
-          file = (path / add_cr).expand(library_path)
-          return [file] if File.file?(file)
-          file = (path / "src" / add_cr).expand(library_path)
-          return [file] if File.file?(file)
-          file = (path / "src" / path.basename / add_cr).expand(library_path)
-          return [file] if File.file?(file)
+        if path.to_s.ends_with?("**")
+          return @options.paths.flat_map { |library_path|
+            Dir.glob(Path[path.to_s + "/*"].expand(library_path)).select { |s|
+              File.file?(s)
+            }.map { |s| Path[s] }
+          }.sort
+        elsif path.to_s.ends_with?("*")
+          return @options.paths.flat_map { |library_path|
+            Dir.glob(path.expand(library_path)).select { |s|
+              File.file?(s)
+            }.map { |s| Path[s] }
+          }.sort
+        else
+          @options.paths.each do |library_path|
+            file = path.expand(library_path)
+            return [file] if File.file?(file)
+            file = Path[path.to_s + ".cr"].expand(library_path)
+            return [file] if File.file?(file)
+            file = (path / add_cr).expand(library_path)
+            return [file] if File.file?(file)
+            file = (path / "src" / add_cr).expand(library_path)
+            return [file] if File.file?(file)
+            file = (path / "src" / path.basename / add_cr).expand(library_path)
+            return [file] if File.file?(file)
+          end
         end
       end
       nil
