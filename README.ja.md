@@ -12,7 +12,7 @@ Crystal 言語の[インストール](https://ja.crystal-lang.org/install/)が�
 
 ```sh
 $ cd <your favorite directory>
-$ git clone https://github.com/yuruhi/cr-bundle.git && cd cd-bundle
+$ git clone https://github.com/yuruhi/cr-bundle.git && cd cr-bundle
 $ shards build --release
 $ cp bin/cr-bundle <your favorite bin>
 ```
