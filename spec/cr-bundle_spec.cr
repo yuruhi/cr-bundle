@@ -226,6 +226,17 @@ describe CrBundle do
       RESULT
       FileUtils.rm(%w[a.cr b.cr])
     end
+    it "require in the same line" do
+      File.write("1.cr", %[puts "1.cr"])
+      File.write("2.cr", %[puts "2.cr"])
+      File.write("a.cr", %[require "./1"; require "./2"])
+      run_bundle("a.cr").should eq <<-RESULT
+      # require "./1"
+      puts "1.cr"; # require "./2"
+      puts "2.cr"
+      RESULT
+      FileUtils.rm(%w[a.cr 1.cr 2.cr])
+    end
 
     it "don't expand require inside comments" do
       File.write("file.cr", %[puts "file.cr"])

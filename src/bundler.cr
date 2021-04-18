@@ -100,7 +100,7 @@ module CrBundle
       end.reverse_each do |(path, location), expanded|
         string = lines[location.line_number - 1]
         start_index = location.column_number - 1
-        end_index = string[start_index..].match(/require\s*".*"/).not_nil!.end
+        end_index = string[start_index..].match(/require\s*".*?"/).not_nil!.end.not_nil! + start_index
         lines[location.line_number - 1] = string.sub(start_index...end_index, expanded)
       end
       lines.join('\n')
