@@ -226,5 +226,33 @@ describe CrBundle do
       RESULT
       FileUtils.rm(%w[a.cr b.cr])
     end
+
+    it "don't expand require inside comments" do
+      File.write("file.cr", %[puts "file.cr"])
+      File.write("a.cr", %[# require "./file"])
+      run_bundle("a.cr").should eq <<-RESULT
+      # require "./file"
+      RESULT
+      FileUtils.rm(%w[a.cr file.cr])
+    end
+    it "don't expand require inside strings" do
+      File.write("file.cr", %[puts "file.cr"])
+      source = <<-'SOURCE'
+      "requre \"./file\""
+      %[require "./file"]
+      %|require "./file"|
+      %w[require "./file"]
+      %w[require"./file"]
+      <<-STRING
+      require "./file"
+      STRING
+      "require \"./file\"
+      require \"./file\"
+      "
+      SOURCE
+      File.write("a.cr", source)
+      run_bundle("a.cr").should eq source
+      FileUtils.rm(%w[a.cr file.cr])
+    end
   end
 end
