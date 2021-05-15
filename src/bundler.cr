@@ -105,5 +105,13 @@ module CrBundle
       end
       lines.join('\n')
     end
+
+    def list_dependencies(source : String, file_name : Path) : Array(Path)
+      parser = Crystal::Parser.new(source)
+      parser.filename = file_name.to_s
+      detect_require(parser.parse).flat_map { |path, location|
+        get_absolute_paths(Path[path], file_name) || ([] of Path)
+      }
+    end
   end
 end

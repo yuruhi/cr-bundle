@@ -36,6 +36,7 @@ module CrBundle
       options = Options.new
       source = nil
       file_name = nil
+      dependencies = false
       if paths = ENV["CR_BUNDLE_PATH"]?
         options.paths = paths.split(':').map { |s| Path[s] }
       end
@@ -65,6 +66,10 @@ module CrBundle
         else
           info("Ignored -p option since set environment CR_BUNDLE_PATH.")
         end
+      end
+
+      parser.on("-d", "--dependencies", "output dependencies") do
+        dependencies = true
       end
 
       parser.missing_option do |option|
@@ -102,11 +107,15 @@ module CrBundle
 
       parser.parse(args)
 
-      bundled = Bundler.new(options).bundle(source.not_nil!, file_name.not_nil!)
-      if options.inplace
-        File.write(file_name.not_nil!, bundled.to_slice)
+      if dependencies
+        puts Bundler.new(options).list_dependencies(source.not_nil!, file_name.not_nil!).join(' ')
       else
-        puts bundled
+        bundled = Bundler.new(options).bundle(source.not_nil!, file_name.not_nil!)
+        if options.inplace
+          File.write(file_name.not_nil!, bundled.to_slice)
+        else
+          puts bundled
+        end
       end
     end
   end
