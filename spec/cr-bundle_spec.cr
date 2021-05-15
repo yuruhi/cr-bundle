@@ -2,7 +2,7 @@ require "./spec_helper"
 require "file_utils"
 
 describe CrBundle do
-  describe "bundler" do
+  describe "bundle" do
     it %[require "./file" and expand "./file.cr"] do
       File.write("file.cr", %[puts "file.cr"])
       File.write("a.cr", %[require "./file"\nputs "a.cr"])
@@ -264,6 +264,52 @@ describe CrBundle do
       File.write("a.cr", source)
       run_bundle("a.cr").should eq source
       FileUtils.rm(%w[a.cr file.cr])
+    end
+
+    it "format" do
+      File.write("a.cr", "p 1+1")
+      options = CrBundle::Options.new
+      options.format = true
+      run_bundle("a.cr", options).should eq "p 1 + 1\n"
+      FileUtils.rm("a.cr")
+    end
+
+    it "format after bundling" do
+      File.write("file.cr", %[def a(b, c)\nb+c\nend])
+      File.write("a.cr", %[require"./file.cr"\np a(1, 2)])
+      options = CrBundle::Options.new
+      options.format = true
+      run_bundle("a.cr", options).should eq <<-RESULT
+      # require "./file.cr"
+      def a(b, c)
+        b + c
+      end
+
+      p a(1, 2)
+
+      RESULT
+      FileUtils.rm(%w[file.cr a.cr])
+    end
+  end
+
+  describe "dependencies" do
+    it "no dependencies" do
+      File.write("a.cr", %[puts "a.cr"])
+      run_dependencies("a.cr").should eq [] of Path
+      FileUtils.rm("a.cr")
+    end
+    it "one dependency" do
+      File.write("file.cr", %[puts "file.cr"])
+      File.write("a.cr", %[require "./file.cr"])
+      run_dependencies("a.cr").should eq [Path["file.cr"].expand]
+      FileUtils.rm(%w[file.cr a.cr])
+    end
+    it "two dependencies" do
+      File.write("1.cr", %[1])
+      File.write("2.cr", %[2])
+      File.write("a.cr", %[require "./1.cr"\nrequire "./2.cr"])
+      run_dependencies("a.cr").should eq %w[1.cr 2.cr].map { |s| Path[s].expand }
+      FileUtils.rm(%w[1.cr 2.cr a.cr])
     end
   end
 end

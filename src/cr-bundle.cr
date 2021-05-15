@@ -112,7 +112,7 @@ module CrBundle
       parser.parse(args)
 
       if dependencies
-        puts Bundler.new(options).list_dependencies(source.not_nil!, file_name.not_nil!).join(' ')
+        puts Bundler.new(options).dependencies(source.not_nil!, file_name.not_nil!).join(' ')
       else
         bundled = Bundler.new(options).bundle(source.not_nil!, file_name.not_nil!)
         if options.inplace
