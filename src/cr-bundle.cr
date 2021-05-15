@@ -14,6 +14,7 @@ module CrBundle
   class Options
     property inplace : Bool = false
     property paths : Array(Path) = [] of Path
+    property format : Bool = false
   end
 
   class CLI
@@ -59,6 +60,9 @@ module CrBundle
       end
       parser.on("-i", "--inplace", "inplace edit") do
         options.inplace = true
+      end
+      parser.on("-f", "--format", "run format after bundling") do
+        options.format = true
       end
       parser.on("-p PATH", "--path PATH", "indicate require path\n(you can be specified with the environment `CR_BUNDLE_PATH`)") do |path|
         if options.paths.empty?

@@ -1,4 +1,5 @@
 require "compiler/crystal/syntax"
+require "compiler/crystal/tools/formatter"
 
 module CrBundle
   class Bundler
@@ -103,7 +104,9 @@ module CrBundle
         end_index = string[start_index..].match(/require\s*".*?"/).not_nil!.end.not_nil! + start_index
         lines[location.line_number - 1] = string.sub(start_index...end_index, expanded)
       end
-      lines.join('\n')
+      bundled = lines.join('\n')
+      bundled = Crystal.format(bundled, file_name.to_s) if @options.format
+      bundled
     end
 
     def list_dependencies(source : String, file_name : Path) : Array(Path)
