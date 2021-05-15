@@ -28,7 +28,10 @@ usage: cr-bundle [programfile]
     -h, --help                       show this help message
     -e SOURCE, --eval SOURCE         eval code from args
     -i, --inplace                    inplace edit
+    -f, --format                     run format after bundling
     -p PATH, --path PATH             indicate require path
+                                     (you can be specified with the environment `CR_BUNDLE_PATH`)
+    -d, --dependencies               output dependencies
 ```
 
 ```crystal
