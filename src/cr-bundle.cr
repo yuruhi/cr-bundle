@@ -56,7 +56,6 @@ module CrBundle
 
       parser.on("-e SOURCE", "--eval SOURCE", "eval code from args") do |eval_source|
         source = eval_source
-        file_name = Path[Dir.current]
       end
       parser.on("-i", "--inplace", "inplace edit") do
         options.inplace = true
@@ -74,6 +73,8 @@ module CrBundle
 
       parser.on("-d", "--dependencies", "output dependencies") do
         dependencies = true
+        info("Ignored -i option.") if options.inplace
+        info("Ignored -f option.") if options.format
       end
 
       parser.missing_option do |option|
@@ -110,6 +111,8 @@ module CrBundle
       end
 
       parser.parse(args)
+
+      file_name = Path[Dir.current] / "_.cr" if file_name.nil?
 
       if dependencies
         puts Bundler.new(options).dependencies(source.not_nil!, file_name.not_nil!).join('\n')
