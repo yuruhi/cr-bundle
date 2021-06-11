@@ -12,11 +12,11 @@ module CrBundle
       add_cr = path.basename.to_s + ".cr"
       if path.to_s.starts_with?(%r[\./|\.\./])
         if path.to_s.ends_with?("**")
-          return Dir.glob(Path[path.to_s + "/*"].expand(required_from.parent)).select { |s|
+          return Dir.glob(Path[path.to_s + "/*"].expand(required_from.parent).to_s).select { |s|
             File.file?(s)
           }.map { |s| Path[s] }.sort
         elsif path.to_s.ends_with?("*")
-          return Dir.glob(path.expand(required_from.parent)).select { |s|
+          return Dir.glob(path.expand(required_from.parent).to_s).select { |s|
             File.file?(s)
           }.map { |s| Path[s] }.sort
         else
@@ -30,13 +30,13 @@ module CrBundle
       else
         if path.to_s.ends_with?("**")
           return @options.paths.flat_map { |library_path|
-            Dir.glob(Path[path.to_s + "/*"].expand(library_path)).select { |s|
+            Dir.glob(Path[path.to_s + "/*"].expand(library_path).to_s).select { |s|
               File.file?(s)
             }.map { |s| Path[s] }
           }.sort
         elsif path.to_s.ends_with?("*")
           return @options.paths.flat_map { |library_path|
-            Dir.glob(path.expand(library_path)).select { |s|
+            Dir.glob(path.expand(library_path).to_s).select { |s|
               File.file?(s)
             }.map { |s| Path[s] }
           }.sort
