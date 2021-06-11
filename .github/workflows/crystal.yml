@@ -8,6 +8,10 @@ on:
 
 jobs:
   build:
+    strategy:
+      fail-fast: false
+      matrix:
+        crystal: [0.33.0, latest]
 
     runs-on: ubuntu-latest
 
@@ -15,10 +19,15 @@ jobs:
       image: crystallang/crystal
 
     steps:
-    - uses: actions/checkout@v2
+    - name: Download source
+      uses: actions/checkout@v2
+    - name: Install Crystal
+      uses: oprypin/install-crystal@v1
+      with:
+        crystal: ${{ matrix.crystal }}
     - name: Install dependencies
       run: shards install
     - name: Run tests
       run: crystal spec
-    - name: format check
+    - name: Format check
       run: crystal tool format --check
