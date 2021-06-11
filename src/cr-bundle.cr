@@ -3,7 +3,7 @@ require "colorize"
 require "./bundler"
 
 module CrBundle
-  VERSION = "0.1.0"
+  VERSION = "0.3.1"
   BANNER  = <<-HELP_MESSAGE
       cr-bundle is a crystal language's bundler.
 
