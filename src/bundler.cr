@@ -1,5 +1,5 @@
 require "compiler/crystal/syntax"
-require "compiler/crystal/tools/formatter"
+require "compiler/crystal/formatter"
 
 module CrBundle
   class Bundler
@@ -58,7 +58,7 @@ module CrBundle
       nil
     end
 
-    def detect_require(ast : Crystal::ASTNode) : Array({String, Crystal::Location})
+    private def detect_require(ast : Crystal::ASTNode) : Array({String, Crystal::Location})
       result = [] of {String, Crystal::Location}
       case ast
       when Crystal::Expressions
@@ -105,16 +105,15 @@ module CrBundle
         lines[location.line_number - 1] = string.sub(start_index...end_index, expanded)
       end
       bundled = lines.join('\n')
-      bundled = Crystal.format(bundled, file_name.to_s) if @options.format
-      bundled
+      @options.format ? Crystal.format(bundled, file_name.to_s) : bundled
     end
 
     def dependencies(source : String, file_name : Path) : Array(Path)
       parser = Crystal::Parser.new(source)
       parser.filename = file_name.to_s
-      detect_require(parser.parse).flat_map { |path, location|
+      detect_require(parser.parse).flat_map do |path, location|
         get_absolute_paths(Path[path], file_name) || ([] of Path)
-      }
+      end
     end
   end
 end
