@@ -18,7 +18,7 @@ def run_dependencies(file)
   bundler.dependencies(File.read(file), Path[file].expand)
 end
 
-macro spec_it(require_file, actual_file, rm_dir = "")
+macro spec_absolute(require_file, actual_file, rm_dir = "")
   it %[require {{require_file}} and expand {{actual_file}}] do
     require_file = Path[{{require_file}}]
     actual_file = Path[{{actual_file}}]
@@ -38,7 +38,7 @@ macro spec_it(require_file, actual_file, rm_dir = "")
   end
 end
 
-macro spec_with_path(require_file, actual_file)
+macro spec_relative(require_file, actual_file)
   it %[require {{require_file}} and expand {{actual_file}}] do
     require_file = Path[{{require_file}}]
     actual_file = Path["dir"] / Path[{{actual_file}}]
