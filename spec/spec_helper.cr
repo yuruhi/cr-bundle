@@ -3,19 +3,19 @@ require "../src/cr-bundle"
 
 def run_bundle(file, options = CrBundle::Options.new)
   bundler = CrBundle::Bundler.new(options)
-  bundler.bundle(File.read(file), Path[file].expand)
+  bundler.bundle(File.read(file), File.expand_path(file))
 end
 
 def run_bundle(file, paths : Array(String))
   options = CrBundle::Options.new
-  options.paths = paths.map { |s| Path[s] }
+  options.paths = paths
   run_bundle(file, options)
 end
 
 def run_dependencies(file)
   options = CrBundle::Options.new
   bundler = CrBundle::Bundler.new(options)
-  bundler.dependencies(File.read(file), Path[file].expand)
+  bundler.dependencies(File.read(file), File.expand_path(file))
 end
 
 macro spec_absolute(require_file, actual_file, rm_dir = "")

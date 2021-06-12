@@ -202,20 +202,20 @@ describe CrBundle do
   describe "dependencies" do
     it "no dependencies" do
       File.write("a.cr", %["a.cr"])
-      run_dependencies("a.cr").should eq [] of Path
+      run_dependencies("a.cr").should eq [] of String
       FileUtils.rm("a.cr")
     end
     it "one dependency" do
       File.write("file.cr", %["file.cr"])
       File.write("a.cr", %[require "./file.cr"])
-      run_dependencies("a.cr").should eq [Path["file.cr"].expand]
+      run_dependencies("a.cr").should eq [File.expand_path("file.cr")]
       FileUtils.rm(%w[file.cr a.cr])
     end
     it "two dependencies" do
       File.write("1.cr", %[1])
       File.write("2.cr", %[2])
       File.write("a.cr", %[require "./1.cr"\nrequire "./2.cr"])
-      run_dependencies("a.cr").should eq %w[1.cr 2.cr].map { |s| Path[s].expand }
+      run_dependencies("a.cr").should eq %w[1.cr 2.cr].map { |s| File.expand_path(s) }
       FileUtils.rm(%w[1.cr 2.cr a.cr])
     end
   end

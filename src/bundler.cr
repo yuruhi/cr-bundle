@@ -4,67 +4,68 @@ require "compiler/crystal/formatter"
 module CrBundle
   class Bundler
     def initialize(@options : Options)
-      @require_history = Deque(Path).new
+      @require_history = Deque(String).new
     end
 
     private macro check_path(path)
       %path = ({{path}}).to_s
       %path += ".cr" unless %path.ends_with?(".cr")
-      return Path[File.expand_path(%path)] if File.exists?(%path)
+      return File.expand_path(%path) if File.exists?(%path)
     end
 
-    private def collect_files(dir : Path, rec : Bool) : Array(Path)
-      files = [] of Path
-      Dir.each_child(dir.to_s) do |file|
-        file = dir / file
+    private def collect_files(dir : String, rec : Bool) : Array(String)
+      files = [] of String
+      Dir.each_child(dir) do |file|
+        file = "#{dir}/#{file}"
         if File.directory?(file)
           files.concat collect_files(file, rec) if rec
         else
-          files.push file if file.extension == ".cr"
+          files.push file if file.ends_with?(".cr")
         end
       end
       files
     end
 
     # see: https://crystal-lang.org/reference/syntax_and_semantics/requiring_files.html
-    private def find_path(path : Path, relative_to : Path) : Path | Array(Path) | Nil
-      is_relative = path.to_s.starts_with?(".")
-      includes_slash = path.to_s.includes?('/')
-      if path.extension == ".cr"
-        check_path relative_to / path
-      elsif (rec = path.to_s.ends_with?("/**")) || path.to_s.ends_with?("/*")
-        return collect_files(relative_to / path.dirname, rec)
+    private def find_path(path : String, relative_to : String) : String | Array(String) | Nil
+      is_relative = path.starts_with?(".")
+      includes_slash = path.includes?('/')
+      relative_path = Path[relative_to] / path
+      if path.ends_with?(".cr")
+        check_path relative_path
+      elsif (rec = path.ends_with?("/**")) || path.ends_with?("/*")
+        return collect_files(relative_path.dirname, rec)
       elsif !is_relative && !includes_slash
-        check_path relative_to / path
-        check_path relative_to / path / path
-        check_path relative_to / path / "src" / path
-        check_path relative_to / path / "src" / path / path
+        check_path relative_path
+        check_path relative_path / path
+        check_path relative_path / "src" / path
+        check_path relative_path / "src" / path / path
       elsif !is_relative && includes_slash
-        before, after = path.to_s.split('/', 2)
-        check_path relative_to / path
-        check_path relative_to / path / path.basename
-        check_path relative_to / before / "src" / after
-        check_path relative_to / before / "src" / after / path.basename
+        before, after = path.split('/', 2)
+        check_path relative_path
+        check_path relative_path / relative_path.basename
+        check_path Path[relative_to] / before / "src" / after
+        check_path Path[relative_to] / before / "src" / after / relative_path.basename
       elsif is_relative && !includes_slash
-        check_path relative_to / path
-        check_path relative_to / path / path.basename
+        check_path relative_path
+        check_path relative_path / relative_path.basename
       else # if is_relative && includes_slash
-        check_path relative_to / path
-        check_path relative_to / path / path.basename
+        check_path relative_path
+        check_path relative_path / relative_path.basename
       end
       return nil
     end
 
-    private def get_absolute_paths(path : Path, required_from : Path) : Array(Path)?
+    private def get_absolute_paths(path : String, required_from : String) : Array(String)?
       result = if path.to_s.starts_with?('.')
-                 find_path(path, Path[required_from.dirname])
+                 find_path(path, File.dirname(required_from))
                else
-                 @options.paths.flat_map { |relative_to| find_path(path, relative_to) || Array(Path).new }
+                 @options.paths.flat_map { |relative_to| find_path(path, relative_to) || Array(String).new }
                end
       case result
-      when Path
+      when String
         [result]
-      when Array(Path)
+      when Array(String)
         result.empty? ? nil : result
       end
     end
@@ -82,7 +83,7 @@ module CrBundle
       result
     end
 
-    def bundle(source : String, file_name : Path) : String
+    def bundle(source : String, file_name : String) : String
       @require_history << file_name
 
       parser = Crystal::Parser.new(source)
@@ -90,7 +91,7 @@ module CrBundle
 
       requires = detect_requires(parser.parse)
       expanded_codes = requires.map do |path, location|
-        if absolute_paths = get_absolute_paths(Path[path], file_name)
+        if absolute_paths = get_absolute_paths(path, file_name)
           %[# require "#{path}"\n] + absolute_paths.sort.join('\n') { |absolute_path|
             unless @require_history.includes?(absolute_path)
               bundle(File.read(absolute_path), absolute_path)
@@ -116,11 +117,11 @@ module CrBundle
       @options.format ? Crystal.format(bundled, file_name.to_s) : bundled
     end
 
-    def dependencies(source : String, file_name : Path) : Array(Path)
+    def dependencies(source : String, file_name : String) : Array(String)
       parser = Crystal::Parser.new(source)
       parser.filename = file_name.to_s
       detect_requires(parser.parse).flat_map do |path, location|
-        get_absolute_paths(Path[path], file_name) || ([] of Path)
+        get_absolute_paths(path, file_name) || Array(String).new
       end
     end
   end

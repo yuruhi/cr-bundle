@@ -13,7 +13,7 @@ module CrBundle
 
   class Options
     property inplace : Bool = false
-    property paths : Array(Path) = [] of Path
+    property paths : Array(String) = [] of String
     property format : Bool = false
   end
 
@@ -35,11 +35,11 @@ module CrBundle
 
     def run(args = ARGV)
       options = Options.new
-      source = nil
-      file_name = nil
+      source : String? = nil
+      file_name : String? = nil
       dependencies = false
       if paths = ENV["CR_BUNDLE_PATH"]?
-        options.paths = paths.split(':').map { |s| Path[s] }
+        options.paths = paths.split(':')
       end
 
       parser = OptionParser.new
@@ -65,7 +65,7 @@ module CrBundle
       end
       parser.on("-p PATH", "--path PATH", "indicate require path\n(you can be specified with the environment `CR_BUNDLE_PATH`)") do |path|
         if options.paths.empty?
-          options.paths = path.split(':').map { |s| Path[s] }
+          options.paths = path.split(':')
         else
           info("Ignored -p option since set environment CR_BUNDLE_PATH.")
         end
@@ -97,7 +97,7 @@ module CrBundle
               error("Is a directory: `#{file}`")
             end
             source = File.read(unknown_args[0])
-            file_name = Path[file].expand
+            file_name = File.expand_path(file)
             unknown_args[1..].each { |file|
               info("File #{file} is ignored.")
             }
@@ -112,7 +112,7 @@ module CrBundle
 
       parser.parse(args)
 
-      file_name = Path[Dir.current] / "_.cr" if file_name.nil?
+      file_name = "#{Dir.current}/_.cr" if file_name.nil?
 
       if dependencies
         puts Bundler.new(options).dependencies(source.not_nil!, file_name.not_nil!).join('\n')
