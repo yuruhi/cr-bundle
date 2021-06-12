@@ -7,55 +7,66 @@ module CrBundle
       @require_history = Deque(Path).new
     end
 
-    # see: https://crystal-lang.org/reference/syntax_and_semantics/requiring_files.html
-    private def get_absolute_paths(path : Path, required_from : Path) : Array(Path)?
-      add_cr = path.basename.to_s + ".cr"
-      if path.to_s.starts_with?(%r[\./|\.\./])
-        if path.to_s.ends_with?("**")
-          return Dir.glob(Path[path.to_s + "/*"].expand(required_from.parent).to_s).select { |s|
-            File.file?(s)
-          }.map { |s| Path[s] }.sort
-        elsif path.to_s.ends_with?("*")
-          return Dir.glob(path.expand(required_from.parent).to_s).select { |s|
-            File.file?(s)
-          }.map { |s| Path[s] }.sort
+    macro check_path(path)
+      %path = {{path}}
+      return Path[File.expand_path(%path)] if File.exists?(%path)
+    end
+
+    private def collect_files(dir : Path, rec : Bool) : Array(Path)
+      files = [] of Path
+      Dir.each_child(dir) do |file|
+        file = dir / file
+        if File.directory?(file)
+          files.concat collect_files(file, rec) if rec
         else
-          file = path.expand(required_from.parent)
-          return [file] if File.file?(file)
-          file = Path[path.to_s + ".cr"].expand(required_from.parent)
-          return [file] if File.file?(file)
-          file = (path / add_cr).expand(required_from.parent)
-          return [file] if File.file?(file)
-        end
-      else
-        if path.to_s.ends_with?("**")
-          return @options.paths.flat_map { |library_path|
-            Dir.glob(Path[path.to_s + "/*"].expand(library_path).to_s).select { |s|
-              File.file?(s)
-            }.map { |s| Path[s] }
-          }.sort
-        elsif path.to_s.ends_with?("*")
-          return @options.paths.flat_map { |library_path|
-            Dir.glob(path.expand(library_path).to_s).select { |s|
-              File.file?(s)
-            }.map { |s| Path[s] }
-          }.sort
-        else
-          @options.paths.each do |library_path|
-            file = path.expand(library_path)
-            return [file] if File.file?(file)
-            file = Path[path.to_s + ".cr"].expand(library_path)
-            return [file] if File.file?(file)
-            file = (path / add_cr).expand(library_path)
-            return [file] if File.file?(file)
-            file = (path / "src" / add_cr).expand(library_path)
-            return [file] if File.file?(file)
-            file = (path / "src" / path.basename / add_cr).expand(library_path)
-            return [file] if File.file?(file)
-          end
+          files.push file if file.extension == ".cr"
         end
       end
-      nil
+      files
+    end
+
+    # see: https://crystal-lang.org/reference/syntax_and_semantics/requiring_files.html
+    private def find_path(path : Path, relative_to : Path) : Path | Array(Path) | Nil 
+      is_relative = path.to_s.starts_with?(".")
+      includes_slash = path.to_s.includes?('/')
+      if path.extension == ".cr"
+        check_path relative_to / path
+      elsif (rec = path.to_s.ends_with?("/**")) || path.to_s.ends_with?("/*")
+        return collect_files(relative_to / path.dirname, rec)
+      elsif !is_relative && !includes_slash
+        check_path relative_to / "#{path}.cr" 
+        check_path relative_to / path / "#{path}.cr"
+        check_path relative_to / path / "src" / "#{path}.cr"
+        check_path relative_to / path / "src" / path / "#{path}.cr"
+      elsif !is_relative && includes_slash
+        before, after = path.to_s.split('/', 2)
+        check_path relative_to / "#{path}.cr"
+        check_path relative_to / path / "#{path.basename}.cr"
+        check_path relative_to / before / "src" / "#{after}.cr"
+        check_path relative_to / before / "src" / after / "#{path.basename}.cr"
+      elsif is_relative && !includes_slash
+        check_path relative_to / "#{path}.cr"
+        check_path relative_to / path / "#{path.basename}.cr"
+      else # if is_relative && includes_slash
+        check_path relative_to / "#{path}.cr"
+        check_path relative_to / path / "#{path.basename}.cr"
+      end
+
+      return nil
+    end
+
+    private def get_absolute_paths(path : Path, required_from : Path) : Array(Path)?
+      result = if path.to_s.starts_with?('.')
+        find_path(path, Path[required_from.dirname])
+      else
+        @options.paths.flat_map { |relative_to| find_path(path, relative_to) || Array(Path).new }
+      end
+      case result
+      when Path
+        [result]
+      when Array(Path)
+        result.empty? ? nil : result
+      end
     end
 
     private def detect_require(ast : Crystal::ASTNode) : Array({String, Crystal::Location})
