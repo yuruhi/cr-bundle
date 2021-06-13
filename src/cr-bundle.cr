@@ -98,15 +98,15 @@ module CrBundle
             end
             source = File.read(unknown_args[0])
             file_name = File.expand_path(file)
-            unknown_args[1..].each { |file|
+            unknown_args[1..].each do |file|
               info("File #{file} is ignored.")
-            }
+            end
           end
         else
           error("Cannot use -i when using -e") if options.inplace
-          unknown_args.each { |file|
+          unknown_args.each do |file|
             info("File #{file} is ignored.")
-          }
+          end
         end
       end
 
