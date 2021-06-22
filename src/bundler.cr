@@ -4,7 +4,7 @@ require "compiler/crystal/formatter"
 module CrBundle
   class Bundler
     def initialize(@options : Options)
-      @require_history = Deque(String).new
+      @require_history = Set(String).new
     end
 
     private macro check_path(path)
@@ -94,13 +94,15 @@ module CrBundle
       requires = detect_requires(parser.parse)
       expanded_codes = requires.map do |path, location|
         if absolute_paths = get_absolute_paths(path, file_name)
-          %[# require "#{path}"\n] + absolute_paths.sort.join('\n') { |absolute_path|
+          expanded = String::Builder.new
+          expanded << %[# require "#{path}"\n]
+          absolute_paths.sort.each_with_index do |absolute_path, i|
+            expanded << '\n' if i > 0
             unless @require_history.includes?(absolute_path)
-              bundle(File.read(absolute_path), absolute_path)
-            else
-              ""
+              expanded << bundle(File.read(absolute_path), absolute_path)
             end
-          }
+          end
+          expanded.to_s
         else
           %[require "#{path}"]
         end
