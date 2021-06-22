@@ -62,12 +62,14 @@ module CrBundle
                else
                  @options.paths.flat_map { |relative_to| find_path(path, relative_to) || Array(String).new }
                end
-      case result
-      when String
-        [result]
-      when Array(String)
-        result.empty? ? nil : result
-      end
+      (
+        case result
+        when String
+          [result]
+        when Array(String)
+          result.empty? ? nil : result
+        end
+      ).try &.map { |file| File.expand_path(file) }
     end
 
     private def detect_requires(ast : Crystal::ASTNode) : Array({String, Crystal::Location})
