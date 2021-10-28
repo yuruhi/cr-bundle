@@ -2,74 +2,131 @@ require "compiler/crystal/syntax"
 require "compiler/crystal/formatter"
 
 module CrBundle
+  # see: https://crystal-lang.org/reference/syntax_and_semantics/requiring_files.html
+  module Path
+    extend self
+
+    def find(path : String, required_from : String, require_paths : Array(String)) : Array(String)?
+      paths =
+        if path.starts_with?('.')
+          find_in_path_relative_to_dir(path, File.dirname(required_from))
+        else
+          require_paths.flat_map do |relative_to|
+            find_in_path_relative_to_dir(path, relative_to) || Array(String).new
+          end
+        end
+
+      case paths
+      when String
+        [paths]
+      when Array(String)
+        paths.empty? ? nil : paths
+      end.try &.map { |file| File.expand_path(file) }
+    end
+
+    # Copied from: https://github.com/crystal-lang/crystal/blob/1.2.0/src/compiler/crystal/crystal_path.cr
+    private def find_in_path_relative_to_dir(filename, relative_to)
+      return unless relative_to.is_a?(String)
+
+      # Check if it's a wildcard.
+      if filename.ends_with?("/*") || (recursive = filename.ends_with?("/**"))
+        filename_dir_index = filename.rindex('/').not_nil!
+        filename_dir = filename[0..filename_dir_index]
+        relative_dir = "#{relative_to}/#{filename_dir}"
+        if File.exists?(relative_dir)
+          files = [] of String
+          gather_dir_files(relative_dir, files, recursive)
+          return files
+        end
+
+        return nil
+      end
+
+      each_file_expansion(filename, relative_to) do |path|
+        absolute_path = File.expand_path(path)
+        return absolute_path if File.exists?(absolute_path)
+      end
+
+      nil
+    end
+
+    private def each_file_expansion(filename, relative_to, &)
+      relative_filename = "#{relative_to}/#{filename}"
+      # Check if .cr file exists.
+      yield relative_filename.ends_with?(".cr") ? relative_filename : "#{relative_filename}.cr"
+
+      filename_is_relative = filename.starts_with?('.')
+
+      shard_name, _, shard_path = filename.partition("/")
+      shard_path = shard_path.presence
+
+      if !filename_is_relative && shard_path
+        shard_src = "#{relative_to}/#{shard_name}/src"
+
+        # If it's "foo/bar/baz", check if "foo/src/bar/baz.cr" exists (for a shard, non-namespaced structure)
+        yield "#{shard_src}/#{shard_path}.cr"
+
+        # Then check if "foo/src/foo/bar/baz.cr" exists (for a shard, namespaced structure)
+        yield "#{shard_src}/#{shard_name}/#{shard_path}.cr"
+
+        # If it's "foo/bar/baz", check if "foo/bar/baz/baz.cr" exists (std, nested)
+        basename = File.basename(relative_filename)
+        yield "#{relative_filename}/#{basename}.cr"
+
+        # If it's "foo/bar/baz", check if "foo/src/foo/bar/baz/baz.cr" exists (shard, non-namespaced, nested)
+        yield "#{shard_src}/#{shard_path}/#{shard_path}.cr"
+
+        # If it's "foo/bar/baz", check if "foo/src/foo/bar/baz/baz.cr" exists (shard, namespaced, nested)
+        yield "#{shard_src}/#{shard_name}/#{shard_path}/#{shard_path}.cr"
+
+        return nil
+      end
+
+      basename = File.basename(relative_filename)
+
+      # If it's "foo", check if "foo/foo.cr" exists (for the std, nested)
+      yield "#{relative_filename}/#{basename}.cr"
+
+      unless filename_is_relative
+        # If it's "foo", check if "foo/src/foo.cr" exists (for a shard)
+        yield "#{relative_filename}/src/#{basename}.cr"
+      end
+    end
+
+    private def gather_dir_files(dir, files_accumulator, recursive)
+      files = [] of String
+      dirs = [] of String
+
+      Dir.each_child(dir) do |filename|
+        full_name = "#{dir}/#{filename}"
+
+        if File.directory?(full_name)
+          if recursive
+            dirs << filename
+          end
+        else
+          if filename.ends_with?(".cr")
+            files << full_name
+          end
+        end
+      end
+
+      files.sort!
+      dirs.sort!
+
+      files.each do |file|
+        files_accumulator << File.expand_path(file)
+      end
+
+      dirs.each do |subdir|
+        gather_dir_files("#{dir}/#{subdir}", files_accumulator, recursive)
+      end
+    end
+  end
+
   class Bundler
     def initialize(@options : Options)
       @require_history = Set(String).new
-    end
-
-    private macro check_path(path)
-      %path = ({{path}}).to_s
-      %path += ".cr" unless %path.ends_with?(".cr")
-      return File.expand_path(%path) if File.exists?(%path)
-    end
-
-    private def collect_files(dir : String, rec : Bool) : Array(String)
-      files = [] of String
-      Dir.each_child(dir) do |file|
-        file = "#{dir}/#{file}"
-        if File.directory?(file)
-          files.concat collect_files(file, rec) if rec
-        else
-          files.push file if file.ends_with?(".cr")
-        end
-      end
-      files
-    end
-
-    # see: https://crystal-lang.org/reference/syntax_and_semantics/requiring_files.html
-    private def find_path(path : String, relative_to : String) : String | Array(String) | Nil
-      is_relative = path.starts_with?(".")
-      includes_slash = path.includes?('/')
-      relative_path = Path[relative_to] / path
-      if path.ends_with?(".cr")
-        check_path relative_path
-      elsif (rec = path.ends_with?("/**")) || path.ends_with?("/*")
-        return collect_files(relative_path.dirname, rec)
-      elsif !is_relative && !includes_slash
-        check_path relative_path
-        check_path relative_path / path
-        check_path relative_path / "src" / path
-        check_path relative_path / "src" / path / path
-      elsif !is_relative && includes_slash
-        before, after = path.split('/', 2)
-        check_path relative_path
-        check_path relative_path / relative_path.basename
-        check_path Path[relative_to] / before / "src" / after
-        check_path Path[relative_to] / before / "src" / after / relative_path.basename
-      elsif is_relative && !includes_slash
-        check_path relative_path
-        check_path relative_path / relative_path.basename
-      else # if is_relative && includes_slash
-        check_path relative_path
-        check_path relative_path / relative_path.basename
-      end
-      return nil
-    end
-
-    private def get_absolute_paths(path : String, required_from : String) : Array(String)?
-      result = if path.to_s.starts_with?('.')
-                 find_path(path, File.dirname(required_from))
-               else
-                 @options.paths.flat_map { |relative_to| find_path(path, relative_to) || Array(String).new }
-               end
-      (
-        case result
-        when String
-          [result]
-        when Array(String)
-          result.empty? ? nil : result
-        end
-      ).try &.map { |file| File.expand_path(file) }
     end
 
     private def detect_requires(ast : Crystal::ASTNode) : Array({String, Crystal::Location})
@@ -93,7 +150,7 @@ module CrBundle
 
       requires = detect_requires(parser.parse)
       expanded_codes = requires.map do |path, location|
-        if absolute_paths = get_absolute_paths(path, file_name)
+        if absolute_paths = Path.find(path, file_name, @options.paths)
           expanded = String::Builder.new
           expanded << %[# require "#{path}"\n]
           absolute_paths.sort.each_with_index do |absolute_path, i|
@@ -125,7 +182,7 @@ module CrBundle
       parser = Crystal::Parser.new(source)
       parser.filename = file_name.to_s
       detect_requires(parser.parse).flat_map do |path, location|
-        get_absolute_paths(path, file_name) || Array(String).new
+        Path.find(path, file_name, @options.paths) || Array(String).new
       end
     end
   end

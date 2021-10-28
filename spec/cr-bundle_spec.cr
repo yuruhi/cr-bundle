@@ -1,6 +1,46 @@
 require "./spec_helper"
 require "file_utils"
 
+private def assert_finds(search, expected, rm_dir = nil, file = __FILE__, line = __LINE__)
+  it "searchs #{search} and finds #{expected}", file, line do
+    expected.each do |file|
+      Dir.mkdir_p File.dirname(file)
+      File.touch file
+    end
+
+    result = CrBundle::Path.find(search, Dir.current + "/a.cr", [Dir.current])
+    result.should eq(expected.map { |file| File.expand_path file }), file: file, line: line
+
+    expected.each { |file| File.delete file }
+    FileUtils.rm_r rm_dir if rm_dir
+  end
+end
+
+describe CrBundle::Path do
+  assert_finds "foo.cr", ["foo.cr"]
+  assert_finds "foo", ["foo.cr"]
+  assert_finds "foo", ["foo/foo.cr"], "foo"
+  assert_finds "foo", ["foo/src/foo.cr"], "foo/src"
+  assert_finds "./foo.cr", ["foo.cr"]
+  assert_finds "./foo", ["foo.cr"]
+  assert_finds "./foo", ["foo/foo.cr"], "foo"
+  assert_finds "../foo.cr", ["../foo.cr"]
+  assert_finds "../foo", ["../foo.cr"]
+  assert_finds "../foo", ["../foo/foo.cr"], "../foo"
+  assert_finds "foo/bar.cr", ["foo/bar.cr"], "foo"
+  assert_finds "foo/bar", ["foo/bar.cr"], "foo"
+  assert_finds "foo/bar", ["foo/src/bar.cr"], "foo/src"
+  assert_finds "foo/bar", ["foo/src/bar/bar.cr"], "foo/src/bar"
+  assert_finds "./foo/bar.cr", ["foo/bar.cr"], "foo"
+  assert_finds "./foo/bar", ["foo/bar.cr"], "foo"
+  assert_finds "./foo/bar", ["foo/bar/bar.cr"], "foo/bar"
+  assert_finds "../foo/bar.cr", ["../foo/bar.cr"], "../foo"
+  assert_finds "../foo/bar", ["../foo/bar.cr"], "../foo"
+  assert_finds "../foo/bar", ["../foo/bar/bar.cr"], "../foo/bar"
+  assert_finds "foo/*", ["foo/1.cr", "foo/2.cr"], "foo"
+  assert_finds "foo/**", ["foo/1.cr", "foo/2.cr", "foo/bar/1.cr"], "foo"
+end
+
 describe CrBundle do
   describe "bundle" do
     spec_absolute("./file.cr", "./file.cr")
@@ -51,12 +91,10 @@ describe CrBundle do
     spec_relative("file", "file.cr")
     spec_relative("file", "file/file.cr")
     spec_relative("file", "file/src/file.cr")
-    spec_relative("file", "file/src/file/file.cr")
     spec_relative("foo/bar/baz.cr", "foo/bar/baz.cr")
     spec_relative("foo/bar/baz", "foo/bar/baz.cr")
     spec_relative("foo/bar/baz", "foo/bar/baz/baz.cr")
     spec_relative("foo/bar/baz", "foo/src/bar/baz.cr")
-    spec_relative("foo/bar/baz", "foo/src/bar/baz/baz.cr")
     spec_relative("/file.cr", "file.cr")
     spec_relative("/file", "file.cr")
     spec_relative("/file", "file/file.cr")
