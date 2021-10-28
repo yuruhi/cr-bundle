@@ -1,5 +1,6 @@
-require "./spec_helper"
+require "spec"
 require "file_utils"
+require "../src/bundler"
 
 private def assert_finds(search, expected, rm_dir = nil, file = __FILE__, line = __LINE__)
   it "searchs #{search} and finds #{expected}", file, line do
@@ -18,6 +19,54 @@ end
 
 private def run_dependencies(file)
   CrBundle.dependencies(File.read(file), File.expand_path(file))
+end
+
+private def run_bundle(file, *, format : Bool = false)
+  CrBundle.bundle(File.read(file), File.expand_path(file), [] of String, format)
+end
+
+private def run_bundle(file, paths : Array(String))
+  CrBundle.bundle(File.read(file), File.expand_path(file), paths, false)
+end
+
+macro spec_absolute(require_file, actual_file, rm_dir = "")
+  it %[require {{require_file}} and expand {{actual_file}}] do
+    require_file = Path[{{require_file}}]
+    actual_file = Path[{{actual_file}}]
+    Dir.mkdir_p(actual_file.dirname)
+    File.write(actual_file, %["#{actual_file}"])
+    File.write("a.cr", %[require "#{require_file}"\n"a.cr"])
+
+    run_bundle("a.cr").should eq <<-RESULT
+    # require "#{require_file}"
+    "#{actual_file}"
+    "a.cr"
+    RESULT
+
+    File.delete(actual_file)
+    File.delete("a.cr")
+    FileUtils.rm_r({{rm_dir}}) unless {{rm_dir}}.empty?
+  end
+end
+
+macro spec_relative(require_file, actual_file)
+  it %[require {{require_file}} and expand {{actual_file}}] do
+    require_file = Path[{{require_file}}]
+    actual_file = Path["dir"] / Path[{{actual_file}}]
+    Dir.mkdir_p(actual_file.dirname)
+    File.write(actual_file, %["#{actual_file}"])
+    File.write("a.cr", %[require "#{require_file}"\n"a.cr"])
+
+    run_bundle("a.cr", ["dir"]).should eq <<-RESULT
+    # require "#{require_file}"
+    "#{actual_file}"
+    "a.cr"
+    RESULT
+
+    File.delete(actual_file)
+    File.delete("a.cr")
+    FileUtils.rm_r("dir")
+  end
 end
 
 describe CrBundle::Path do
@@ -255,18 +304,14 @@ describe CrBundle do
 
     it "format" do
       File.write("a.cr", "p 1+1")
-      options = CrBundle::Options.new
-      options.format = true
-      run_bundle("a.cr", options).should eq "p 1 + 1\n"
+      run_bundle("a.cr", format: true).should eq "p 1 + 1\n"
       FileUtils.rm("a.cr")
     end
 
     it "format after bundling" do
       File.write("file.cr", %[def a(b, c)\nb+c\nend])
       File.write("a.cr", %[require"./file.cr"\np a(1, 2)])
-      options = CrBundle::Options.new
-      options.format = true
-      run_bundle("a.cr", options).should eq <<-RESULT
+      run_bundle("a.cr", format: true).should eq <<-RESULT
       # require "./file.cr"
       def a(b, c)
         b + c
@@ -278,11 +323,11 @@ describe CrBundle do
       FileUtils.rm(%w[file.cr a.cr])
     end
   end
-  
+
   describe ".dependencies" do
     it "no dependencies" do
       File.write("a.cr", %["a.cr"])
-      run_dependencies("a.cr").should eq [] of String      
+      run_dependencies("a.cr").should eq [] of String
       FileUtils.rm("a.cr")
     end
 

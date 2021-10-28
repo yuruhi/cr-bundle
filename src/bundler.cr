@@ -24,7 +24,7 @@ module CrBundle
       end.try &.map { |file| File.expand_path(file) }
     end
 
-    # Copied from: https://github.com/crystal-lang/crystal/blob/1.2.0/src/compiler/crystal/crystal_path.cr
+    # Copied from: https://github.com/crystal-lang/crystal/blob/1.2.0/src/compiler/crystal/crystal_path.cr#L103-L199
     private def find_in_path_relative_to_dir(filename, relative_to)
       return unless relative_to.is_a?(String)
 
@@ -154,7 +154,7 @@ module CrBundle
   end
 
   class Bundler
-    def initialize(@options : Options)
+    def initialize(@paths : Array(String), @format : Bool)
       @require_history = Set(String).new
     end
 
@@ -163,7 +163,7 @@ module CrBundle
       requires = RequireDetecter.run(source, filename)
 
       expanded_codes = requires.map do |node|
-        absolute_paths = Path.find(node.string, filename, @options.paths)
+        absolute_paths = Path.find(node.string, filename, @paths)
         next %[require "#{node.string}"] unless absolute_paths
 
         String.build do |expanded|
@@ -188,7 +188,11 @@ module CrBundle
         lines[location.line_number - 1] = string.sub(start_index...end_index, expanded)
       end
       bundled = lines.join('\n')
-      @options.format ? Crystal.format(bundled, filename.to_s) : bundled
+      @format ? Crystal.format(bundled, filename.to_s) : bundled
     end
+  end
+
+  def self.bundle(source : String, filename : String, paths : Array(String), format : Bool) : String
+    Bundler.new(paths, format).bundle(source, filename)
   end
 end

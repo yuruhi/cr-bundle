@@ -11,12 +11,6 @@ module CrBundle
 
       HELP_MESSAGE
 
-  class Options
-    property inplace : Bool = false
-    property paths : Array(String) = [] of String
-    property format : Bool = false
-  end
-
   class CLI
     def error(message)
       STDERR.puts "[#{"ERROR".colorize(:red)}] #{message}"
@@ -34,13 +28,9 @@ module CrBundle
     end
 
     def run(args = ARGV)
-      options = Options.new
-      source : String? = nil
-      file_name : String? = nil
-      dependencies = false
-      if paths = ENV["CR_BUNDLE_PATH"]?
-        options.paths = paths.split(':')
-      end
+      source, file_name = nil, nil
+      dependencies, inplace, format = false, false, false
+      paths = ENV["CR_BUNDLE_PATH"]?.try(&.split(':')) || [] of String
 
       parser = OptionParser.new
       parser.banner = BANNER
@@ -58,14 +48,14 @@ module CrBundle
         source = eval_source
       end
       parser.on("-i", "--inplace", "inplace edit") do
-        options.inplace = true
+        inplace = true
       end
       parser.on("-f", "--format", "run format after bundling") do
-        options.format = true
+        format = true
       end
       parser.on("-p PATH", "--path PATH", "indicate require path\n(you can be specified with the environment `CR_BUNDLE_PATH`)") do |path|
-        if options.paths.empty?
-          options.paths = path.split(':')
+        if paths.nil? || paths.try &.empty?
+          paths = path.split(':')
         else
           info("Ignored -p option since set environment CR_BUNDLE_PATH.")
         end
@@ -73,8 +63,8 @@ module CrBundle
 
       parser.on("-d", "--dependencies", "output dependencies") do
         dependencies = true
-        info("Ignored -i option.") if options.inplace
-        info("Ignored -f option.") if options.format
+        info("Ignored -i option.") if inplace
+        info("Ignored -f option.") if format
       end
 
       parser.missing_option do |option|
@@ -87,7 +77,7 @@ module CrBundle
       parser.unknown_args do |unknown_args|
         if source.nil?
           if unknown_args.size == 0
-            error("Cannot use -i when reading from stdin.") if options.inplace
+            error("Cannot use -i when reading from stdin.") if inplace
             source = STDIN.gets_to_end
           else
             file = unknown_args[0]
@@ -103,7 +93,7 @@ module CrBundle
             end
           end
         else
-          error("Cannot use -i when using -e") if options.inplace
+          error("Cannot use -i when using -e") if inplace
           unknown_args.each do |file|
             info("File #{file} is ignored.")
           end
@@ -113,12 +103,13 @@ module CrBundle
       parser.parse(args)
 
       file_name = "#{Dir.current}/_.cr" if file_name.nil?
+      raise "Bug" if source.nil?
 
       if dependencies
-        puts dependencies(source.not_nil!, file_name.not_nil!, options.path).join('\n')
+        puts CrBundle.dependencies(source.not_nil!, file_name.not_nil!, paths).join('\n')
       else
-        bundled = Bundler.new(options).bundle(source.not_nil!, file_name.not_nil!)
-        if options.inplace
+        bundled = CrBundle.bundle(source.not_nil!, file_name.not_nil!, paths, format)
+        if inplace
           File.write(file_name.not_nil!, bundled.to_slice)
         else
           puts bundled
