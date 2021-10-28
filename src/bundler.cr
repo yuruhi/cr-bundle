@@ -147,6 +147,12 @@ module CrBundle
     end
   end
 
+  def self.dependencies(source : String, filename : String, paths : Array(String) = [] of String) : Array(String)
+    RequireDetecter.run(source, filename).flat_map do |node|
+      Path.find(node.string, filename, paths) || Array(String).new
+    end
+  end
+
   class Bundler
     def initialize(@options : Options)
       @require_history = Set(String).new
@@ -183,12 +189,6 @@ module CrBundle
       end
       bundled = lines.join('\n')
       @options.format ? Crystal.format(bundled, filename.to_s) : bundled
-    end
-
-    def dependencies(source : String, filename : String) : Array(String)
-      RequireDetecter.run(source, filename).flat_map do |node|
-        Path.find(node.string, filename, @options.paths) || Array(String).new
-      end
     end
   end
 end

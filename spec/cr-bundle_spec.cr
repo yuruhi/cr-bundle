@@ -16,6 +16,10 @@ private def assert_finds(search, expected, rm_dir = nil, file = __FILE__, line =
   end
 end
 
+private def run_dependencies(file)
+  CrBundle.dependencies(File.read(file), File.expand_path(file))
+end
+
 describe CrBundle::Path do
   assert_finds "foo.cr", ["foo.cr"]
   assert_finds "foo", ["foo.cr"]
@@ -274,11 +278,11 @@ describe CrBundle do
       FileUtils.rm(%w[file.cr a.cr])
     end
   end
-
-  describe "dependencies" do
+  
+  describe ".dependencies" do
     it "no dependencies" do
       File.write("a.cr", %["a.cr"])
-      run_dependencies("a.cr").should eq [] of String
+      run_dependencies("a.cr").should eq [] of String      
       FileUtils.rm("a.cr")
     end
 

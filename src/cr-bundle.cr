@@ -115,7 +115,7 @@ module CrBundle
       file_name = "#{Dir.current}/_.cr" if file_name.nil?
 
       if dependencies
-        puts Bundler.new(options).dependencies(source.not_nil!, file_name.not_nil!).join('\n')
+        puts dependencies(source.not_nil!, file_name.not_nil!, options.path).join('\n')
       else
         bundled = Bundler.new(options).bundle(source.not_nil!, file_name.not_nil!)
         if options.inplace
