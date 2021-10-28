@@ -124,22 +124,27 @@ module CrBundle
     end
   end
 
+  class RequireDetecter < Crystal::Visitor
+    getter requires = [] of Crystal::Require
+
+    def visit(node : Crystal::Require)
+      @requires << node
+    end
+
+    def visit(node : Crystal::ASTNode)
+      true
+    end
+
+    def self.run(nodes : Crystal::ASTNode)
+      detecter = RequireDetecter.new
+      nodes.accept detecter
+      detecter.requires
+    end
+  end
+
   class Bundler
     def initialize(@options : Options)
       @require_history = Set(String).new
-    end
-
-    private def detect_requires(ast : Crystal::ASTNode) : Array({String, Crystal::Location})
-      result = [] of {String, Crystal::Location}
-      case ast
-      when Crystal::Expressions
-        ast.expressions.each do |child|
-          result.concat detect_requires(child)
-        end
-      when Crystal::Require
-        result << {ast.string, ast.location.not_nil!}
-      end
-      result
     end
 
     def bundle(source : String, file_name : String) : String
@@ -147,12 +152,13 @@ module CrBundle
 
       parser = Crystal::Parser.new(source)
       parser.filename = file_name.to_s
+      nodes = parser.parse
 
-      requires = detect_requires(parser.parse)
-      expanded_codes = requires.map do |path, location|
-        if absolute_paths = Path.find(path, file_name, @options.paths)
+      requires = RequireDetecter.run(nodes)
+      expanded_codes = requires.map do |node|
+        if absolute_paths = Path.find(node.string, file_name, @options.paths)
           expanded = String::Builder.new
-          expanded << %[# require "#{path}"\n]
+          expanded << %[# require "#{node.string}"\n]
           absolute_paths.sort.each_with_index do |absolute_path, i|
             expanded << '\n' if i > 0
             unless @require_history.includes?(absolute_path)
@@ -161,14 +167,15 @@ module CrBundle
           end
           expanded.to_s
         else
-          %[require "#{path}"]
+          %[require "#{node.string}"]
         end
       end
 
       lines = source.lines
-      requires.zip(expanded_codes).sort_by do |(path, location), expanded|
-        location
-      end.reverse_each do |(path, location), expanded|
+      requires.zip(expanded_codes).sort_by do |node, _|
+        node.location.not_nil!
+      end.reverse_each do |node, expanded|
+        location = node.location.not_nil!
         string = lines[location.line_number - 1]
         start_index = location.column_number - 1
         end_index = string[start_index..].match(/require\s*".*?"/).not_nil!.end.not_nil! + start_index
@@ -181,8 +188,9 @@ module CrBundle
     def dependencies(source : String, file_name : String) : Array(String)
       parser = Crystal::Parser.new(source)
       parser.filename = file_name.to_s
-      detect_requires(parser.parse).flat_map do |path, location|
-        Path.find(path, file_name, @options.paths) || Array(String).new
+      nodes = parser.parse
+      RequireDetecter.run(nodes).flat_map do |node|
+        Path.find(node.string, file_name, @options.paths) || Array(String).new
       end
     end
   end
