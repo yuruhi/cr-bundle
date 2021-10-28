@@ -188,10 +188,11 @@ module CrBundle
         lines[location.line_number - 1] = string.sub(start_index...end_index, expanded)
       end
       bundled = lines.join('\n')
-      @format ? Crystal.format(bundled, filename.to_s) : bundled
+      @format ? Crystal.format(bundled, filename) : bundled
     end
   end
 
+  # *filename* must be absolute path.
   def self.bundle(source : String, filename : String, paths : Array(String), format : Bool) : String
     Bundler.new(paths, format).bundle(source, filename)
   end
