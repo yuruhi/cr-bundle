@@ -156,7 +156,7 @@ describe CrBundle do
       "b1.cr"
       # require "./b2"
       # require "./a"
-      
+
       "b2.cr"
       "c.cr"
       RESULT

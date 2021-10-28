@@ -140,6 +140,11 @@ module CrBundle
       nodes.accept detecter
       detecter.requires
     end
+
+    def self.run(source : String, filename : String)
+      parser = Crystal::Parser.new(source).tap(&.filename = filename)
+      run(parser.parse)
+    end
   end
 
   class Bundler
@@ -147,17 +152,15 @@ module CrBundle
       @require_history = Set(String).new
     end
 
-    def bundle(source : String, file_name : String) : String
-      @require_history << file_name
+    def bundle(source : String, filename : String) : String
+      @require_history << filename
+      requires = RequireDetecter.run(source, filename)
 
-      parser = Crystal::Parser.new(source)
-      parser.filename = file_name.to_s
-      nodes = parser.parse
-
-      requires = RequireDetecter.run(nodes)
       expanded_codes = requires.map do |node|
-        if absolute_paths = Path.find(node.string, file_name, @options.paths)
-          expanded = String::Builder.new
+        absolute_paths = Path.find(node.string, filename, @options.paths)
+        next %[require "#{node.string}"] unless absolute_paths
+
+        String.build do |expanded|
           expanded << %[# require "#{node.string}"\n]
           absolute_paths.sort.each_with_index do |absolute_path, i|
             expanded << '\n' if i > 0
@@ -165,9 +168,6 @@ module CrBundle
               expanded << bundle(File.read(absolute_path), absolute_path)
             end
           end
-          expanded.to_s
-        else
-          %[require "#{node.string}"]
         end
       end
 
@@ -182,15 +182,12 @@ module CrBundle
         lines[location.line_number - 1] = string.sub(start_index...end_index, expanded)
       end
       bundled = lines.join('\n')
-      @options.format ? Crystal.format(bundled, file_name.to_s) : bundled
+      @options.format ? Crystal.format(bundled, filename.to_s) : bundled
     end
 
-    def dependencies(source : String, file_name : String) : Array(String)
-      parser = Crystal::Parser.new(source)
-      parser.filename = file_name.to_s
-      nodes = parser.parse
-      RequireDetecter.run(nodes).flat_map do |node|
-        Path.find(node.string, file_name, @options.paths) || Array(String).new
+    def dependencies(source : String, filename : String) : Array(String)
+      RequireDetecter.run(source, filename).flat_map do |node|
+        Path.find(node.string, filename, @options.paths) || Array(String).new
       end
     end
   end
