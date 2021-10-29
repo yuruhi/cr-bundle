@@ -4,15 +4,15 @@ require "../src/bundler"
 
 private def assert_finds(search, expected, rm_dir = nil, file = __FILE__, line = __LINE__)
   it "searchs #{search} and finds #{expected}", file, line do
-    expected.each do |file|
-      Dir.mkdir_p File.dirname(file)
-      File.touch file
+    expected.each do |f|
+      Dir.mkdir_p File.dirname(f)
+      File.touch f
     end
 
     result = CrBundle::Path.find(search, Dir.current + "/a.cr", [Dir.current])
-    result.should eq(expected.map { |file| File.expand_path file }), file: file, line: line
+    result.should eq(expected.map { |f| File.expand_path f }), file: file, line: line
 
-    expected.each { |file| File.delete file }
+    expected.each { |f| File.delete f }
     FileUtils.rm_r rm_dir if rm_dir
   end
 end
@@ -309,7 +309,7 @@ describe CrBundle do
       def a(b, c)
         b + c
       end
-      
+
       p a(1, 2)
 
       EXPECTED
