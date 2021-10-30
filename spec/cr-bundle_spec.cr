@@ -33,10 +33,6 @@ private def assert_dependencies(source, filename, expected, *, file = __FILE__, 
   result.to_set.should eq(expected.to_set), file: file, line: line
 end
 
-private def run_dependencies(file)
-  CrBundle.dependencies(File.read(file), File.expand_path(file))
-end
-
 describe CrBundle::Path do
   assert_finds "foo.cr", ["foo.cr"]
   assert_finds "foo", ["foo.cr"]
