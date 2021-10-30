@@ -27,16 +27,14 @@ private def assert_bundles(filename, expected, *, paths = [] of String, format =
   bundled.should eq(expected), file: file, line: line
 end
 
+private def assert_dependencies(source, filename, expected, *, file = __FILE__, line = __LINE__)
+  result = CrBundle.dependencies(source, filename)
+  expected.map! { |f| File.expand_path(f) }
+  result.to_set.should eq(expected.to_set), file: file, line: line
+end
+
 private def run_dependencies(file)
   CrBundle.dependencies(File.read(file), File.expand_path(file))
-end
-
-private def run_bundle(file, *, format : Bool = false)
-  CrBundle.bundle(File.read(file), File.expand_path(file), [] of String, format)
-end
-
-private def run_bundle(file, paths : Array(String))
-  CrBundle.bundle(File.read(file), File.expand_path(file), paths, false)
 end
 
 describe CrBundle::Path do
@@ -69,7 +67,7 @@ end
 
 describe CrBundle do
   describe ".bundle" do
-    it %[require "./file"] do
+    it %[expands `require "./file"`] do
       File.write("file.cr", %["file.cr"])
       assert_bundles(<<-SOURCE, "a.cr", <<-EXPECTED)
       require "./file"
@@ -81,7 +79,7 @@ describe CrBundle do
       EXPECTED
     end
 
-    it %[require "./dir/*"] do
+    it %[expands `require "./dir/*"`] do
       Dir.mkdir_p("dir/dir2")
       File.write("dir/1.cr", %["dir/1.cr"])
       File.write("dir/2.cr", %["dir/2.cr"])
@@ -100,7 +98,7 @@ describe CrBundle do
       FileUtils.rm_r("dir")
     end
 
-    it %[require "./dir/**"] do
+    it %[expands `require "./dir/**"`] do
       Dir.mkdir_p("dir/dir2")
       File.write("dir/1.cr", %["dir/1.cr"])
       File.write("dir/2.cr", %["dir/2.cr"])
@@ -120,7 +118,7 @@ describe CrBundle do
       FileUtils.rm_r("dir")
     end
 
-    it %[require "file"] do
+    it %[expands `require "file"`] do
       File.write("file.cr", %["file.cr"])
       assert_bundles(<<-SOURCE, "a.cr", <<-EXPECTED, paths: %w[.])
       require "file"
@@ -132,7 +130,7 @@ describe CrBundle do
       EXPECTED
     end
 
-    it %[require "dir/*"] do
+    it %[expands `require "dir/*"`] do
       Dir.mkdir_p("dir/dir2")
       File.write("dir/1.cr", %["dir/1.cr"])
       File.write("dir/2.cr", %["dir/2.cr"])
@@ -151,7 +149,7 @@ describe CrBundle do
       FileUtils.rm_r("dir")
     end
 
-    it %[require "dir/**"] do
+    it %[expands `require "dir/**"`] do
       Dir.mkdir_p("dir/dir2")
       File.write("dir/1.cr", %["dir/1.cr"])
       File.write("dir/2.cr", %["dir/2.cr"])
@@ -171,7 +169,7 @@ describe CrBundle do
       FileUtils.rm_r("dir")
     end
 
-    it "don't expand unknown files" do
+    it "doesn't expand unknown files" do
       source = <<-SOURCE
       require "unknown_file"
       require "spec"
@@ -182,7 +180,7 @@ describe CrBundle do
       assert_bundles(source, "a.cr", source)
     end
 
-    it "require same file" do
+    it "doesn't expand same file" do
       File.write("a.cr", %["a.cr"])
       File.write("b1.cr", %[require "./a"\n"b1.cr"])
       File.write("b2.cr", %[require "./a"\n"b2.cr"])
@@ -206,7 +204,7 @@ describe CrBundle do
       FileUtils.rm(%w[a.cr b1.cr b2.cr])
     end
 
-    it "require each other" do
+    it "doesn't expand same file2" do
       File.write("a.cr", %[require "./b"\n"a"])
       File.write("b.cr", %[require "./a"\n"b"])
       assert_bundles("a.cr", <<-EXPECTED)
@@ -219,7 +217,7 @@ describe CrBundle do
       FileUtils.rm(%w[a.cr b.cr])
     end
 
-    it "require itself" do
+    it "doesn't expand itself" do
       File.write("a.cr", %[require "./a"\n"a.cr"])
       assert_bundles("a.cr", <<-EXPECTED)
       # require "./a"
@@ -229,7 +227,7 @@ describe CrBundle do
       File.delete("a.cr")
     end
 
-    it "require itself2" do
+    it "doesn't expand itself2" do
       Dir.mkdir("dir")
       File.write("dir/a.cr", %[require "./*"\n"a.cr"])
       assert_bundles("dir/a.cr", <<-EXPECTED)
@@ -240,7 +238,7 @@ describe CrBundle do
       FileUtils.rm_r("dir")
     end
 
-    it "require itself3" do
+    it "doesn't expand itself3" do
       Dir.mkdir("dir")
       File.write("dir/a.cr", %[require "./**"\n"a.cr"])
       assert_bundles("dir/a.cr", <<-EXPECTED)
@@ -251,7 +249,7 @@ describe CrBundle do
       FileUtils.rm_r("dir")
     end
 
-    it "require in the same line" do
+    it %[expands `require "foo"; require "bar"`] do
       File.write("1.cr", %["1.cr"])
       File.write("2.cr", %["2.cr"])
       assert_bundles(<<-SOURCE, "a.cr", <<-EXPECTED)
@@ -266,7 +264,7 @@ describe CrBundle do
       FileUtils.rm(%w[1.cr 2.cr])
     end
 
-    it "don't expand require inside comments" do
+    it "doesn't expand require inside comments" do
       File.write("file.cr", %["file.cr"])
       assert_bundles(<<-SOURCE, "a.cr", <<-EXPECTED)
       # require "./file"
@@ -276,7 +274,7 @@ describe CrBundle do
       FileUtils.rm(%w[file.cr])
     end
 
-    it "don't expand require inside strings" do
+    it "doesn't expand require inside string literals" do
       File.write("file.cr", %["file.cr"])
       source = <<-'SOURCE'
       "requre \"./file\""
@@ -295,11 +293,11 @@ describe CrBundle do
       FileUtils.rm("file.cr")
     end
 
-    it "format" do
+    it "formats" do
       assert_bundles("p 1+1", "a.cr", "p 1 + 1\n", format: true)
     end
 
-    it "format after bundling" do
+    it "formats after bundling" do
       File.write("file.cr", %[def a(b, c)\nb+c\nend])
       assert_bundles(<<-SOURCE, "a.cr", <<-EXPECTED, format: true)
       require"./file"
