@@ -147,10 +147,28 @@ module CrBundle
     end
   end
 
-  def self.dependencies(source : String, filename : String, paths : Array(String) = [] of String) : Array(String)
-    RequireDetecter.run(source, filename).flat_map do |node|
-      Path.find(node.string, filename, paths) || Array(String).new
+  class Dependencies
+    @dependencies = Set(String).new
+
+    def initialize(@paths : Array(String))
     end
+
+    private def gather_dependencies(source : String, filename : String)
+      RequireDetecter.run(source, filename).each do |node|
+        Path.find(node.string, filename, @paths).try &.each do |file|
+          gather_dependencies(File.read(file), file) if @dependencies.add?(file)
+        end
+      end
+    end
+
+    def run(source : String, filename : String) : Array(String)
+      gather_dependencies(source, filename)
+      @dependencies.to_a
+    end
+  end
+
+  def self.dependencies(source : String, filename : String, paths : Array(String) = [] of String) : Array(String)
+    Dependencies.new(paths).run(source, filename)
   end
 
   class Bundler

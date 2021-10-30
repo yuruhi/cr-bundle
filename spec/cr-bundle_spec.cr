@@ -316,25 +316,32 @@ describe CrBundle do
   end
 
   describe ".dependencies" do
-    it "no dependencies" do
-      File.write("a.cr", %["a.cr"])
-      run_dependencies("a.cr").should eq [] of String
-      FileUtils.rm("a.cr")
+    it "detects dependencies" do
+      File.write("1.cr", "1")
+      File.write("2.cr", "2")
+      assert_dependencies(%["a.cr"], "a.cr", %w[])
+      assert_dependencies(%[require "set"], "a.cr", %w[])
+      assert_dependencies(%[require "./1"], "a.cr", %w[1.cr])
+      assert_dependencies(<<-SOURCE, "a.cr", %w[1.cr 2.cr])
+      require "./1"
+      require "./2"
+      SOURCE
+      assert_dependencies(<<-SOURCE, "a.cr", %w[1.cr 2.cr])
+      require "./1"
+      require "set"
+      require "./2"
+      require "./1"
+      SOURCE
+      FileUtils.rm(%w[1.cr 2.cr])
     end
 
-    it "one dependency" do
-      File.write("file.cr", %["file.cr"])
-      File.write("a.cr", %[require "./file.cr"])
-      run_dependencies("a.cr").should eq [File.expand_path("file.cr")]
-      FileUtils.rm(%w[file.cr a.cr])
-    end
-
-    it "two dependencies" do
-      File.write("1.cr", %[1])
-      File.write("2.cr", %[2])
-      File.write("a.cr", %[require "./1.cr"\nrequire "./2.cr"])
-      run_dependencies("a.cr").should eq %w[1.cr 2.cr].map { |s| File.expand_path(s) }
-      FileUtils.rm(%w[1.cr 2.cr a.cr])
+    it "detects dependencies recursive" do
+      File.write("1.cr", "1")
+      File.write("2.cr", %[require "./1"])
+      File.write("3.cr", %[require "./2"])
+      assert_dependencies(%[require "./2"], "a.cr", %w[1.cr 2.cr])
+      assert_dependencies(%[require "./3"], "a.cr", %w[1.cr 2.cr 3.cr])
+      FileUtils.rm(%w[1.cr 2.cr 3.cr])
     end
   end
 end
