@@ -13,7 +13,7 @@ private def assert_finds(search, expected, rm_dir = nil, file = __FILE__, line =
     result.should eq(expected.map { |f| File.expand_path f }), file: file, line: line
 
     expected.each { |f| File.delete f }
-    FileUtils.rm_r rm_dir if rm_dir
+    FileUtils.rm_r rm_dir.not_nil! if rm_dir
   end
 end
 
