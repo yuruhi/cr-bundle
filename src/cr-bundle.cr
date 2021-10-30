@@ -3,7 +3,7 @@ require "colorize"
 require "./bundler"
 
 module CrBundle
-  VERSION = "0.3.2"
+  VERSION = "0.4.0"
 
   class CLI
     def error(message)
